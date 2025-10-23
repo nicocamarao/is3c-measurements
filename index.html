@@ -1,15 +1,23 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suite de Análisis de Dominios</title>
+    <title>DC-IS3C Internet Standards Measurement Suite</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <style>
-        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', sans-serif;
+            scroll-behavior: smooth;
+            background: radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.15), transparent 60%),
+                        radial-gradient(circle at 80% 0%, rgba(56, 189, 248, 0.2), transparent 55%),
+                        radial-gradient(circle at 10% 80%, rgba(14, 165, 233, 0.15), transparent 65%),
+                        #020617;
+            color: #0f172a;
+        }
         .loader {
             border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6;
             border-radius: 50%; width: 24px; height: 24px;
@@ -17,81 +25,161 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .check-label { transition: all 0.2s ease-in-out; }
-        .check-label:hover { background-color: #f9fafb; }
+        .check-label:hover { background-color: rgba(148, 163, 184, 0.15); }
         .result-item .label { min-width: 140px; }
+        .background-shape {
+            position: absolute;
+            border-radius: 9999px;
+            filter: blur(40px);
+            opacity: 0.65;
+            mix-blend-mode: screen;
+        }
+        .shape-one {
+            width: 420px;
+            height: 420px;
+            top: -160px;
+            left: -120px;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.35), transparent 60%);
+        }
+        .shape-two {
+            width: 520px;
+            height: 520px;
+            bottom: -220px;
+            right: -120px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.3), transparent 70%);
+        }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
-
-    <div class="w-full max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6 md:p-8 my-8">
-        <div class="text-center mb-6">
-            <h1 class="text-3xl font-bold text-gray-900">Internet Society Uruguay (Mediciones ISOC-LAC)</h1>
-            <p class="text-gray-500 mt-2">Proyecto colaborativo de capítulos de Internet Society para mediciones abiertas de la región LAC.</p>
-            <button id="aboutBtn" class="text-blue-600 underline text-sm mt-2">Acerca de</button>
-            <div id="aboutText" class="hidden mt-4 text-sm text-gray-700">
-                El Capítulo Uruguay de Internet Society, junto a otros capítulos de la región,
-                desarrolló esta herramienta abierta para medir la adopción de tecnologías y buenas prácticas
-                en América Latina y el Caribe. Esta plataforma se integrará con ISOC Pulse para
-                recopilar y compartir información regional.
-            </div>
-        </div>
-
-        <div class="mb-6">
-            <label for="countrySelect" class="block text-sm font-medium text-gray-700 mb-2">Selecciona un país</label>
-            <select id="countrySelect" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                <option value="" selected disabled>-- País --</option>
-            </select>
-        </div>
-
-        <div class="mb-6">
-            <label for="domains" class="block text-sm font-medium text-gray-700 mb-2">Dominios (separados por coma)</label>
-            <textarea id="domains" rows="3" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="google.com, nic.uy, lacnic.net"></textarea>
-        </div>
-
-        <div class="mb-6">
-            <div class="flex justify-between items-center mb-3">
-                <label class="block text-sm font-medium text-gray-700">Verificaciones a realizar</label>
-                <button id="selectAll" type="button" class="text-blue-600 text-sm">Seleccionar todos</button>
-            </div>
-            <div id="checksContainer" class="space-y-3"></div>
-        </div>
-
-        <div class="flex flex-col items-center justify-center">
-            <button id="checkButton" class="bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform hover:scale-105 flex items-center justify-center space-x-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M9 9a2 2 0 114 0 2 2 0 01-4 0z" /><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a4 4 0 00-3.446 6.032l-2.261 2.26a1 1 0 101.414 1.414l2.26-2.26a4 4 0 10-1.15-7.446z" clip-rule="evenodd" /></svg>
-                <span>Analizar Dominios</span>
-            </button>
-            <div class="flex space-x-4 mt-4">
-                <button id="historyButton" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">Ver Historial</button>
-                <button id="clearHistoryButton" class="bg-gray-400 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">Limpiar Historial</button>
-            </div>
-        </div>
-
-        <div id="history" class="mt-6 hidden"></div>
-        <div id="map" class="w-full h-64 mb-8 hidden"></div>
-        <div id="results-container" class="mt-8 space-y-6">
-            <div id="summary" class="hidden bg-white border border-gray-200 rounded-lg shadow-sm">
-                <div class="px-4 py-3 border-b border-gray-200">
-                    <h2 class="text-lg font-semibold text-gray-800">Resumen acumulado</h2>
-                    <p class="text-sm text-gray-500">Totales en tiempo real por verificación</p>
+<body class="text-slate-100">
+    <div class="relative min-h-screen overflow-hidden">
+        <div class="background-shape shape-one"></div>
+        <div class="background-shape shape-two"></div>
+        <div class="relative z-10">
+            <header class="max-w-6xl mx-auto px-6 pt-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <div>
+                    <p class="inline-flex items-center space-x-2 rounded-full bg-sky-500/10 px-4 py-1 text-sm font-medium text-sky-200">
+                        <span data-i18n="navBadge">Dynamic Coalition on Internet Standards, Security &amp; Safety</span>
+                    </p>
+                    <h1 class="mt-4 text-2xl font-semibold text-white md:text-3xl" data-i18n="navTitle">Internet Standards Measurement Project</h1>
+                    <p class="mt-1 text-sm text-slate-300 md:text-base" data-i18n="navSubtitle">An open intelligence workspace built with and for the global DC-IS3C community.</p>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full text-sm text-left">
-                        <thead class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wide">
-                            <tr>
-                                <th class="px-4 py-3">Verificación</th>
-                                <th class="px-4 py-3">Sí</th>
-                                <th class="px-4 py-3">No</th>
-                            </tr>
-                        </thead>
-                        <tbody id="summaryBody" class="divide-y divide-gray-200 bg-white"></tbody>
-                    </table>
+                <div class="flex items-center space-x-2 self-start md:self-auto">
+                    <span class="text-xs uppercase tracking-wide text-slate-300" data-i18n="languageLabel">Interface language</span>
+                    <div class="flex items-center rounded-full bg-white/10 p-1">
+                        <button type="button" data-lang="en" class="language-toggle rounded-full px-3 py-1 text-sm font-medium text-white bg-sky-500 shadow" aria-label="Switch to English">🇬🇧 EN</button>
+                        <button type="button" data-lang="es" class="language-toggle rounded-full px-3 py-1 text-sm font-medium text-slate-200 hover:bg-white/10 transition" aria-label="Cambiar a español">🇪🇸 ES</button>
+                        <button type="button" data-lang="pt" class="language-toggle rounded-full px-3 py-1 text-sm font-medium text-slate-200 hover:bg-white/10 transition" aria-label="Mudar para português">🇧🇷 PT</button>
+                    </div>
                 </div>
-            </div>
-            <div id="loader" class="hidden items-center justify-center py-4">
-                <div class="loader"></div><p class="ml-3 text-gray-600">Analizando...</p>
-            </div>
-            <div id="results" class="space-y-6"></div>
+            </header>
+
+            <main class="max-w-6xl mx-auto px-6 pb-24">
+                <section class="mt-12 grid gap-10 md:grid-cols-[1.1fr_0.9fr] md:items-center">
+                    <div>
+                        <p class="text-sm font-semibold uppercase tracking-wider text-sky-300" data-i18n="heroBadge">Global measurement intelligence</p>
+                        <h2 class="mt-4 text-4xl font-bold leading-tight text-white md:text-5xl" data-i18n="heroTitle">Measure trust and security adoption across the open internet</h2>
+                        <p class="mt-6 text-lg text-slate-200 md:text-xl" data-i18n="heroSubtitle">Run comprehensive diagnostics on domains, discover adoption gaps, and power evidence-based actions for the Dynamic Coalition on Internet Standards, Security and Safety (DC-IS3C).</p>
+                        <div class="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
+                            <a href="#measurement" class="inline-flex items-center justify-center rounded-full bg-sky-500 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-sky-500/30 transition hover:translate-y-[-1px] hover:bg-sky-400" data-i18n="heroCta">Launch the measurement console</a>
+                            <button id="aboutBtn" type="button" class="inline-flex items-center justify-center rounded-full border border-white/30 px-6 py-3 text-base font-semibold text-white transition hover:border-white/60 hover:text-white/90" data-i18n="aboutButton">Why DC-IS3C built this</button>
+                        </div>
+                    </div>
+                    <div class="grid gap-4">
+                        <div class="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+                            <h3 class="text-lg font-semibold text-white" data-i18n="highlightOneTitle">Policy-grade observability</h3>
+                            <p class="mt-2 text-sm text-slate-200" data-i18n="highlightOneText">Combine infrastructure, DNS, TLS, and application checks to understand readiness for critical internet standards.</p>
+                        </div>
+                        <div class="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+                            <h3 class="text-lg font-semibold text-white" data-i18n="highlightTwoTitle">Open collaboration</h3>
+                            <p class="mt-2 text-sm text-slate-200" data-i18n="highlightTwoText">Share reproducible diagnostics across chapters, regulators, and research partners in the LAC region and beyond.</p>
+                        </div>
+                        <div class="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+                            <h3 class="text-lg font-semibold text-white" data-i18n="highlightThreeTitle">Future-ready insights</h3>
+                            <p class="mt-2 text-sm text-slate-200" data-i18n="highlightThreeText">Feed actionable insights into the DC-IS3C roadmap, IS3C observatory, and regional capability-building initiatives.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="mt-16 rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-lg" id="aboutSection">
+                    <div class="max-w-3xl">
+                        <h2 class="text-2xl font-semibold text-white" data-i18n="aboutHeading">About the Dynamic Coalition on Internet Standards, Security and Safety</h2>
+                        <p class="mt-4 text-base text-slate-200" data-i18n="aboutLead">DC-IS3C operates within the Internet Governance Forum (IGF) to advance the adoption of open, secure, and trustworthy standards for the global internet.</p>
+                        <div id="aboutText" class="mt-4 hidden space-y-4 text-sm text-slate-200">
+                            <p data-i18n="aboutParagraphOne">This measurement initiative equips policymakers, civil society, the private sector, and technical communities with verifiable data on how critical standards such as DNSSEC, RPKI, TLS, SMTPUTF8, SPF, DMARC, and emerging trust frameworks are deployed.</p>
+                            <p data-i18n="aboutParagraphTwo">Through the DC-IS3C Dynamic Coalition, we connect regional efforts—including Latin America and the Caribbean chapters of the Internet Society—with global observatories, capacity-building programs, and collaborative research teams.</p>
+                            <p data-i18n="aboutParagraphThree">Every check in this suite is transparent, reproducible, and ready to be integrated into dashboards, policy briefs, and shared learning experiences across the coalition.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="mt-20" id="measurement">
+                    <div class="w-full max-w-5xl mx-auto bg-white text-slate-900 rounded-3xl shadow-2xl shadow-sky-900/20 border border-slate-200/70 p-6 md:p-10">
+                        <div class="text-center mb-6">
+                            <p class="text-sm font-semibold uppercase tracking-wider text-sky-600" data-i18n="measurementBadge">Measurement Console</p>
+                            <h2 class="mt-2 text-3xl font-bold text-slate-900" data-i18n="measurementHeading">Run cross-standard diagnostics in minutes</h2>
+                            <p class="mt-3 text-base text-slate-600" data-i18n="measurementSubtitle">Select a focus country or paste domains, choose the verifications you need, and generate auditable reports for stakeholders.</p>
+                        </div>
+
+                        <div class="mb-6">
+                            <label for="countrySelect" class="block text-sm font-medium text-slate-700 mb-2" data-i18n="countryLabel">Choose a focus country</label>
+                            <select id="countrySelect" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
+                                <option value="" selected disabled data-i18n="countryPlaceholder">-- Country --</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-6">
+                            <label for="domains" class="block text-sm font-medium text-slate-700 mb-2" data-i18n="domainLabel">Domains (comma separated)</label>
+                            <textarea id="domains" rows="3" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition" data-i18n-placeholder="domainPlaceholderText" placeholder="google.com, nic.uy, lacnic.net"></textarea>
+                        </div>
+
+                        <div class="mb-6">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <label class="block text-sm font-medium text-slate-700" data-i18n="checksLabel">Checks to run</label>
+                                <button id="selectAll" type="button" class="text-sky-600 text-sm font-semibold" data-i18n="selectAll">Select all</button>
+                            </div>
+                            <div id="checksContainer" class="space-y-3 mt-3"></div>
+                        </div>
+
+                        <div class="flex flex-col items-center justify-center">
+                            <button id="checkButton" class="bg-sky-600 text-white font-bold py-3 px-6 rounded-full hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 focus:ring-offset-white transition-transform transform hover:scale-105 flex items-center justify-center space-x-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M9 9a2 2 0 114 0 2 2 0 01-4 0z" /><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a4 4 0 00-3.446 6.032l-2.261 2.26a1 1 0 101.414 1.414l2.26-2.26a4 4 0 10-1.15-7.446z" clip-rule="evenodd" /></svg>
+                                <span data-i18n="runButton">Run analysis</span>
+                            </button>
+                            <div class="flex flex-col gap-2 mt-4 sm:flex-row sm:gap-4">
+                                <button id="historyButton" class="bg-slate-800 text-white font-semibold py-2 px-5 rounded-full hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 focus:ring-offset-white" data-i18n="historyButton">View history</button>
+                                <button id="clearHistoryButton" class="bg-slate-400 text-white font-semibold py-2 px-5 rounded-full hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-400 focus:ring-offset-white" data-i18n="clearHistoryButton">Clear history</button>
+                            </div>
+                        </div>
+
+                        <div id="history" class="mt-6 hidden"></div>
+                        <div id="map" class="w-full h-64 mb-8 hidden rounded-2xl overflow-hidden border border-slate-200"></div>
+                        <div id="results-container" class="mt-8 space-y-6">
+                            <div id="summary" class="hidden bg-white border border-slate-200 rounded-2xl shadow-sm">
+                                <div class="px-4 py-3 border-b border-slate-200">
+                                    <h3 class="text-lg font-semibold text-slate-900" data-i18n="summaryTitle">Aggregate summary</h3>
+                                    <p class="text-sm text-slate-500" data-i18n="summarySubtitle">Live totals by verification</p>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full text-sm text-left">
+                                        <thead class="bg-slate-50 text-slate-600 uppercase text-xs tracking-wide">
+                                            <tr>
+                                                <th class="px-4 py-3" data-i18n="summaryVerification">Verification</th>
+                                                <th class="px-4 py-3" data-i18n="summaryYes">Yes</th>
+                                                <th class="px-4 py-3" data-i18n="summaryNo">No</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="summaryBody" class="divide-y divide-slate-200 bg-white"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div id="loader" class="hidden items-center justify-center py-4 text-slate-600">
+                                <div class="loader"></div><p class="ml-3" data-i18n="loaderText">Running diagnostics…</p>
+                            </div>
+                            <div id="results" class="space-y-6"></div>
+                        </div>
+                    </div>
+                </section>
+            </main>
         </div>
     </div>
 
@@ -112,11 +200,260 @@
     const aboutText = document.getElementById('aboutText');
     const mapDiv = document.getElementById('map');
     let map; let mapMarkers = [];
+    let lastMapDomains = [];
     let summaryData = {};
     let summaryElements = {};
         const API_BASE = 'http://localhost:4000';
     const headerCache = {};
     const tlsCache = {};
+
+    const localeMap = { en: 'en-US', es: 'es-ES', pt: 'pt-BR' };
+    let currentLang = 'en';
+
+    const translations = {
+        en: {
+            pageTitle: 'DC-IS3C Internet Standards Measurement Suite',
+            navBadge: 'Dynamic Coalition on Internet Standards, Security & Safety',
+            navTitle: 'Internet Standards Measurement Project',
+            navSubtitle: 'An open intelligence workspace built with and for the global DC-IS3C community.',
+            languageLabel: 'Interface language',
+            heroBadge: 'Global measurement intelligence',
+            heroTitle: 'Measure trust and security adoption across the open internet',
+            heroSubtitle: 'Run comprehensive diagnostics on domains, discover adoption gaps, and power evidence-based actions for the Dynamic Coalition on Internet Standards, Security and Safety (DC-IS3C).',
+            heroCta: 'Launch the measurement console',
+            aboutButton: 'Why DC-IS3C built this',
+            highlightOneTitle: 'Policy-grade observability',
+            highlightOneText: 'Combine infrastructure, DNS, TLS, and application checks to understand readiness for critical internet standards.',
+            highlightTwoTitle: 'Open collaboration',
+            highlightTwoText: 'Share reproducible diagnostics across chapters, regulators, and research partners in the LAC region and beyond.',
+            highlightThreeTitle: 'Future-ready insights',
+            highlightThreeText: 'Feed actionable insights into the DC-IS3C roadmap, IS3C observatory, and regional capability-building initiatives.',
+            aboutHeading: 'About the Dynamic Coalition on Internet Standards, Security and Safety',
+            aboutLead: 'DC-IS3C operates within the Internet Governance Forum (IGF) to advance the adoption of open, secure, and trustworthy standards for the global internet.',
+            aboutParagraphOne: 'This measurement initiative equips policymakers, civil society, the private sector, and technical communities with verifiable data on how critical standards such as DNSSEC, RPKI, TLS, SMTPUTF8, SPF, DMARC, and emerging trust frameworks are deployed.',
+            aboutParagraphTwo: 'Through the DC-IS3C Dynamic Coalition, we connect regional efforts—including Latin America and the Caribbean chapters of the Internet Society—with global observatories, capacity-building programs, and collaborative research teams.',
+            aboutParagraphThree: 'Every check in this suite is transparent, reproducible, and ready to be integrated into dashboards, policy briefs, and shared learning experiences across the coalition.',
+            measurementBadge: 'Measurement Console',
+            measurementHeading: 'Run cross-standard diagnostics in minutes',
+            measurementSubtitle: 'Select a focus country or paste domains, choose the verifications you need, and generate auditable reports for stakeholders.',
+            countryLabel: 'Choose a focus country',
+            countryPlaceholder: '-- Country --',
+            domainLabel: 'Domains (comma separated)',
+            domainPlaceholderText: 'google.com, nic.uy, lacnic.net',
+            checksLabel: 'Checks to run',
+            selectAll: 'Select all',
+            runButton: 'Run analysis',
+            historyButton: 'View history',
+            clearHistoryButton: 'Clear history',
+            summaryTitle: 'Aggregate summary',
+            summarySubtitle: 'Live totals by verification',
+            summaryVerification: 'Verification',
+            summaryYes: 'Yes',
+            summaryNo: 'No',
+            loaderText: 'Running diagnostics…',
+            loadingIndicator: 'Loading…',
+            historyEmpty: 'No history yet',
+            historyDomain: 'Domain',
+            noPositiveResults: 'No positive results yet',
+            noNegativeResults: 'No negative results yet',
+            statusFailed: 'failed',
+            statusError: 'error',
+            mapGenerics: 'Generic TLDs',
+            serviceUnavailable: 'Service unavailable',
+            requestTimeout: 'Request timed out',
+            summaryChecksSuffix: 'checks',
+            groupNetwork: 'Network & IP intelligence',
+            groupDns: 'DNS & infrastructure security',
+            groupMail: 'Email & messaging',
+            groupIdentity: 'Identity & accountability',
+            groupExperience: 'Content & experience',
+            groupSecurity: 'Web & TLS security'
+        },
+        es: {
+            pageTitle: 'Suite de Medición de Estándares de Internet DC-IS3C',
+            navBadge: 'Coalición Dinámica sobre Estándares, Seguridad y Confianza en Internet',
+            navTitle: 'Proyecto de Medición de Estándares de Internet',
+            navSubtitle: 'Un espacio abierto de inteligencia creado con y para la comunidad global de DC-IS3C.',
+            languageLabel: 'Idioma de la interfaz',
+            heroBadge: 'Inteligencia de medición global',
+            heroTitle: 'Mide la adopción de confianza y seguridad en el internet abierto',
+            heroSubtitle: 'Ejecuta diagnósticos integrales sobre dominios, identifica brechas de adopción y habilita acciones basadas en evidencia para la Coalición Dinámica sobre Estándares, Seguridad y Confianza en Internet (DC-IS3C).',
+            heroCta: 'Ir a la consola de medición',
+            aboutButton: '¿Por qué DC-IS3C creó esto?',
+            highlightOneTitle: 'Observabilidad a nivel de políticas',
+            highlightOneText: 'Combina verificaciones de infraestructura, DNS, TLS y aplicaciones para comprender la preparación frente a estándares críticos de internet.',
+            highlightTwoTitle: 'Colaboración abierta',
+            highlightTwoText: 'Comparte diagnósticos reproducibles entre capítulos, reguladores y aliados de investigación en la región LAC y más allá.',
+            highlightThreeTitle: 'Información preparada para el futuro',
+            highlightThreeText: 'Incorpora ideas accionables al plan de DC-IS3C, al observatorio de IS3C y a iniciativas regionales de fortalecimiento de capacidades.',
+            aboutHeading: 'Acerca de la Coalición Dinámica sobre Estándares, Seguridad y Confianza en Internet',
+            aboutLead: 'DC-IS3C actúa dentro del Foro de Gobernanza de Internet (IGF) para impulsar la adopción de estándares abiertos, seguros y confiables para el internet global.',
+            aboutParagraphOne: 'Esta iniciativa de medición entrega a responsables de políticas, sociedad civil, sector privado y comunidades técnicas datos verificables sobre cómo se implementan estándares críticos como DNSSEC, RPKI, TLS, SMTPUTF8, SPF, DMARC y nuevos marcos de confianza.',
+            aboutParagraphTwo: 'A través de la Coalición Dinámica DC-IS3C conectamos los esfuerzos regionales —incluidos los capítulos de Internet Society en América Latina y el Caribe— con observatorios globales, programas de capacitación y equipos de investigación colaborativa.',
+            aboutParagraphThree: 'Cada verificación de esta suite es transparente, reproducible y apta para integrarse en tableros, informes de política y experiencias de aprendizaje compartido en toda la coalición.',
+            measurementBadge: 'Consola de medición',
+            measurementHeading: 'Ejecuta diagnósticos multiestándar en minutos',
+            measurementSubtitle: 'Selecciona un país de referencia o pega dominios, elige las verificaciones necesarias y genera informes auditables para las partes interesadas.',
+            countryLabel: 'Elige un país de referencia',
+            countryPlaceholder: '-- País --',
+            domainLabel: 'Dominios (separados por coma)',
+            domainPlaceholderText: 'google.com, nic.uy, lacnic.net',
+            checksLabel: 'Verificaciones a ejecutar',
+            selectAll: 'Seleccionar todo',
+            runButton: 'Ejecutar análisis',
+            historyButton: 'Ver historial',
+            clearHistoryButton: 'Limpiar historial',
+            summaryTitle: 'Resumen acumulado',
+            summarySubtitle: 'Totales en vivo por verificación',
+            summaryVerification: 'Verificación',
+            summaryYes: 'Sí',
+            summaryNo: 'No',
+            loaderText: 'Ejecutando diagnósticos…',
+            loadingIndicator: 'Cargando…',
+            historyEmpty: 'Sin historial aún',
+            historyDomain: 'Dominio',
+            noPositiveResults: 'Sin resultados positivos',
+            noNegativeResults: 'Sin resultados negativos',
+            statusFailed: 'falló',
+            statusError: 'error',
+            mapGenerics: 'TLD genéricos',
+            serviceUnavailable: 'Servicio no disponible',
+            requestTimeout: 'Tiempo de espera agotado',
+            summaryChecksSuffix: 'controles',
+            groupNetwork: 'Inteligencia de red e IP',
+            groupDns: 'DNS y seguridad de infraestructura',
+            groupMail: 'Correo y mensajería',
+            groupIdentity: 'Identidad y responsabilidad',
+            groupExperience: 'Contenido y experiencia',
+            groupSecurity: 'Seguridad web y TLS'
+        },
+        pt: {
+            pageTitle: 'Suite de Medição de Padrões de Internet DC-IS3C',
+            navBadge: 'Coalizão Dinâmica sobre Padrões, Segurança e Confiança na Internet',
+            navTitle: 'Projeto de Medição de Padrões de Internet',
+            navSubtitle: 'Um espaço aberto de inteligência criado com e para a comunidade global da DC-IS3C.',
+            languageLabel: 'Idioma da interface',
+            heroBadge: 'Inteligência de medição global',
+            heroTitle: 'Meça a adoção de confiança e segurança na internet aberta',
+            heroSubtitle: 'Execute diagnósticos abrangentes em domínios, descubra lacunas de adoção e apoie ações baseadas em evidências para a Coalizão Dinâmica sobre Padrões, Segurança e Confiança na Internet (DC-IS3C).',
+            heroCta: 'Abrir a consola de medição',
+            aboutButton: 'Por que a DC-IS3C criou isto',
+            highlightOneTitle: 'Observabilidade para políticas públicas',
+            highlightOneText: 'Combine verificações de infraestrutura, DNS, TLS e aplicações para entender a prontidão para padrões críticos da internet.',
+            highlightTwoTitle: 'Colaboração aberta',
+            highlightTwoText: 'Compartilhe diagnósticos reproduzíveis entre capítulos, reguladores e parceiros de pesquisa na região LAC e além.',
+            highlightThreeTitle: 'Insights preparados para o futuro',
+            highlightThreeText: 'Leve insights acionáveis ao roteiro da DC-IS3C, ao observatório da IS3C e a iniciativas regionais de capacitação.',
+            aboutHeading: 'Sobre a Coalizão Dinâmica de Padrões, Segurança e Confiança na Internet',
+            aboutLead: 'A DC-IS3C atua dentro do Fórum de Governança da Internet (IGF) para promover a adoção de padrões abertos, seguros e confiáveis para a internet global.',
+            aboutParagraphOne: 'Esta iniciativa de medição oferece a formuladores de políticas, sociedade civil, setor privado e comunidades técnicas dados verificáveis sobre como padrões críticos como DNSSEC, RPKI, TLS, SMTPUTF8, SPF, DMARC e novos marcos de confiança são implementados.',
+            aboutParagraphTwo: 'Por meio da Coalizão Dinâmica DC-IS3C conectamos esforços regionais — incluindo capítulos da Internet Society na América Latina e Caribe — a observatórios globais, programas de capacitação e equipes de pesquisa colaborativa.',
+            aboutParagraphThree: 'Cada verificação desta suíte é transparente, reproduzível e pronta para integração em painéis, relatórios de políticas e experiências de aprendizagem compartilhada em toda a coalizão.',
+            measurementBadge: 'Consola de medição',
+            measurementHeading: 'Execute diagnósticos multivariados em minutos',
+            measurementSubtitle: 'Selecione um país de referência ou cole domínios, escolha as verificações necessárias e gere relatórios auditáveis para as partes interessadas.',
+            countryLabel: 'Escolha um país de referência',
+            countryPlaceholder: '-- País --',
+            domainLabel: 'Domínios (separados por vírgula)',
+            domainPlaceholderText: 'google.com, nic.uy, lacnic.net',
+            checksLabel: 'Verificações a executar',
+            selectAll: 'Selecionar tudo',
+            runButton: 'Executar análise',
+            historyButton: 'Ver histórico',
+            clearHistoryButton: 'Limpar histórico',
+            summaryTitle: 'Resumo agregado',
+            summarySubtitle: 'Totais em tempo real por verificação',
+            summaryVerification: 'Verificação',
+            summaryYes: 'Sim',
+            summaryNo: 'Não',
+            loaderText: 'Executando diagnósticos…',
+            loadingIndicator: 'Carregando…',
+            historyEmpty: 'Sem histórico ainda',
+            historyDomain: 'Domínio',
+            noPositiveResults: 'Sem resultados positivos',
+            noNegativeResults: 'Sem resultados negativos',
+            statusFailed: 'falhou',
+            statusError: 'erro',
+            mapGenerics: 'TLD genéricos',
+            serviceUnavailable: 'Serviço indisponível',
+            requestTimeout: 'Tempo limite da solicitação',
+            summaryChecksSuffix: 'verificações',
+            groupNetwork: 'Inteligência de rede e IP',
+            groupDns: 'DNS e segurança de infraestrutura',
+            groupMail: 'Email e mensageria',
+            groupIdentity: 'Identidade e responsabilidade',
+            groupExperience: 'Conteúdo e experiência',
+            groupSecurity: 'Segurança web e TLS'
+        }
+    };
+
+    function t(key) {
+        const dict = translations[currentLang] || translations.en;
+        return dict[key] ?? translations.en[key] ?? key;
+    }
+
+    function applyTranslations() {
+        const dict = translations[currentLang] || translations.en;
+        document.title = dict.pageTitle;
+        document.documentElement.lang = currentLang;
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (!key) return;
+            const value = dict[key] ?? translations.en[key];
+            if (value) {
+                el.textContent = value;
+            }
+        });
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+            const key = el.getAttribute('data-i18n-placeholder');
+            const value = dict[key] ?? translations.en[key];
+            if (value) {
+                el.setAttribute('placeholder', value);
+            }
+        });
+        document.querySelectorAll('[data-group-title]').forEach(el => {
+            const key = el.dataset.groupTitle;
+            if (key) {
+                el.textContent = t(key);
+            }
+        });
+        document.querySelectorAll('[data-group-count]').forEach(el => {
+            const count = el.dataset.groupCount;
+            const suffix = t('summaryChecksSuffix');
+            if (count) {
+                el.textContent = `${count} ${suffix}`;
+            }
+        });
+    }
+
+    const languageButtons = document.querySelectorAll('.language-toggle');
+    languageButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            currentLang = btn.dataset.lang || 'en';
+            languageButtons.forEach(b => {
+                b.classList.remove('bg-sky-500', 'text-white', 'shadow');
+                b.classList.add('text-slate-200');
+            });
+            btn.classList.add('bg-sky-500', 'text-white', 'shadow');
+            btn.classList.remove('text-slate-200');
+            applyTranslations();
+            if (!historyDiv.classList.contains('hidden')) {
+                loadHistory();
+            }
+            Object.keys(summaryElements).forEach(key => {
+                const elements = summaryElements[key];
+                if (!elements) return;
+                const data = summaryData[key] || { positives: [], negatives: [] };
+                elements.positiveTooltip.innerHTML = renderTooltipList(data.positives || [], t('noPositiveResults'), true);
+                elements.negativeTooltip.innerHTML = renderTooltipList(data.negatives || [], t('noNegativeResults'));
+            });
+            if (lastMapDomains.length) {
+                updateMap(lastMapDomains);
+            }
+        });
+    });
+
+    applyTranslations();
 
     const countryTlds = {
         'Uruguay': ['uy','com.uy','edu.uy','gub.uy','org.uy','net.uy','mil.uy','destinosnaturales.gub.uy','agesic.gub.uy'],
@@ -158,16 +495,23 @@
     function clearMap() {
         mapMarkers.forEach(m => map.removeLayer(m));
         mapMarkers = [];
+        lastMapDomains = [];
+        mapDiv.classList.add('hidden');
     }
 
     async function updateMap(domains) {
-        if (!domains.length) return;
+        lastMapDomains = Array.isArray(domains) ? [...domains] : [];
+        if (!lastMapDomains.length) {
+            clearMap();
+            mapDiv.classList.add('hidden');
+            return;
+        }
         clearMap();
         mapDiv.classList.remove('hidden');
         map.invalidateSize();
         const generics = [];
         const coords = {};
-        for (const d of domains) {
+        for (const d of lastMapDomains) {
             const tld = d.split('.').pop().toLowerCase();
             if (tld.length === 2) {
                 if (!coords[tld]) {
@@ -185,7 +529,7 @@
             mapMarkers.push(marker);
         });
         if (generics.length) {
-            const marker = L.marker([0, 0]).addTo(map).bindPopup(`Genéricos: ${generics.join(', ')}`);
+            const marker = L.marker([0, 0]).addTo(map).bindPopup(`${t('mapGenerics')}: ${generics.join(', ')}`);
             mapMarkers.push(marker);
         }
         map.setView([0, 0], 2);
@@ -193,7 +537,7 @@
 
     const groupDefinitions = [
         {
-            title: 'IP y Red',
+            titleKey: 'groupNetwork',
             checks: [
                 { key: 'ipinfo', label: 'More IP Info', default: true },
                 { key: 'serverlocation', label: 'Server Location', default: true },
@@ -209,7 +553,7 @@
             ]
         },
         {
-            title: 'DNS y Seguridad',
+            titleKey: 'groupDns',
             checks: [
                 { key: 'dnsrecords', label: 'DNS Records', default: true },
                 { key: 'txtrecords', label: 'TXT Records', default: true },
@@ -221,7 +565,7 @@
             ]
         },
         {
-            title: 'Correo y Mensajería',
+            titleKey: 'groupMail',
             checks: [
                 { key: 'emailconfig', label: 'Email Configuration', default: true },
                 { key: 'mx', label: 'MX', default: false },
@@ -232,7 +576,7 @@
             ]
         },
         {
-            title: 'Identidad y Cumplimiento',
+            titleKey: 'groupIdentity',
             checks: [
                 { key: 'whois', label: 'Whois Lookup', default: true },
                 { key: 'domaininfo', label: 'Domain Info', default: true },
@@ -240,7 +584,7 @@
             ]
         },
         {
-            title: 'Contenido y Experiencia',
+            titleKey: 'groupExperience',
             checks: [
                 { key: 'sitefeatures', label: 'Site Features', default: false },
                 { key: 'cookies', label: 'Cookies', default: false },
@@ -256,7 +600,7 @@
             ]
         },
         {
-            title: 'Seguridad Web y TLS',
+            titleKey: 'groupSecurity',
             checks: [
                 { key: 'https', label: 'HTTPS', default: true },
                 { key: 'redirect', label: 'HTTPS Redirect', default: true },
@@ -295,24 +639,32 @@
         container.innerHTML = '';
         groupDefinitions.forEach(group => {
             const details = document.createElement('details');
-            details.className = 'border rounded-lg bg-white shadow-sm';
+            details.className = 'border border-slate-200 rounded-xl bg-white shadow-sm';
             details.open = true;
             const summary = document.createElement('summary');
-            summary.className = 'cursor-pointer select-none px-3 py-2 font-semibold text-gray-700 flex items-center justify-between';
-            summary.innerHTML = `<span>${group.title}</span><span class="text-xs text-gray-500">${group.checks.length} checks</span>`;
+            summary.className = 'cursor-pointer select-none px-3 py-2 font-semibold text-slate-700 flex items-center justify-between';
+            const titleSpan = document.createElement('span');
+            titleSpan.dataset.groupTitle = group.titleKey;
+            titleSpan.textContent = t(group.titleKey);
+            const countSpan = document.createElement('span');
+            countSpan.className = 'text-xs text-slate-500';
+            countSpan.dataset.groupCount = group.checks.length;
+            countSpan.textContent = `${group.checks.length} ${t('summaryChecksSuffix')}`;
+            summary.appendChild(titleSpan);
+            summary.appendChild(countSpan);
             details.appendChild(summary);
             const wrapper = document.createElement('div');
             wrapper.className = 'grid grid-cols-1 sm:grid-cols-2 gap-2 px-3 pb-3';
             group.checks.forEach(check => {
                 const label = document.createElement('label');
-                label.className = 'check-label flex items-center p-2 border rounded-lg cursor-pointer bg-gray-50';
+                label.className = 'check-label flex items-center p-2 border border-slate-200 rounded-lg cursor-pointer bg-slate-50';
                 const input = document.createElement('input');
                 input.type = 'checkbox';
                 input.dataset.check = check.key;
                 if (check.default) input.checked = true;
-                input.className = 'h-4 w-4 rounded';
+                input.className = 'h-4 w-4 rounded text-sky-600 focus:ring-sky-500';
                 const span = document.createElement('span');
-                span.className = 'ml-2 text-sm';
+                span.className = 'ml-2 text-sm text-slate-700';
                 span.textContent = check.label;
                 label.appendChild(input);
                 label.appendChild(span);
@@ -329,20 +681,20 @@
     function loadHistory() {
         const history = JSON.parse(localStorage.getItem('domainHistory') || '[]');
         if (!history.length) {
-            historyDiv.innerHTML = '<div class="text-center text-gray-500">Sin historial</div>';
+            historyDiv.innerHTML = `<div class="text-center text-slate-500">${escapeHtml(t('historyEmpty'))}</div>`;
             return;
         }
         let html = '';
         history.forEach(entry => {
             html += `<div class="mb-4"><h4 class="font-semibold mb-2">${entry.date}</h4>`;
-            html += '<div class="overflow-auto"><table class="min-w-full text-sm border"><thead><tr><th class="border px-2 py-1">Dominio</th>';
-            entry.checks.forEach(c => { html += `<th class="border px-2 py-1">${checkConfig[c]?.label || c}</th>`; });
+            html += `<div class="overflow-auto"><table class="min-w-full text-sm border border-slate-200"><thead><tr><th class="border border-slate-200 px-2 py-1 bg-slate-50 text-left text-slate-700">${escapeHtml(t('historyDomain'))}</th>`;
+            entry.checks.forEach(c => { html += `<th class="border border-slate-200 px-2 py-1 bg-slate-50 text-left text-slate-700">${checkConfig[c]?.label || c}</th>`; });
             html += '</tr></thead><tbody>';
             entry.domains.forEach(d => {
-                html += `<tr><td class="border px-2 py-1">${d.domain}</td>`;
+                html += `<tr><td class="border border-slate-200 px-2 py-1">${d.domain}</td>`;
                 entry.checks.forEach(c => {
                     const val = d.results[c]?.status || '-';
-                    html += `<td class="border px-2 py-1 text-center">${val}</td>`;
+                    html += `<td class="border border-slate-200 px-2 py-1 text-center">${val}</td>`;
                 });
                 html += '</tr>';
             });
@@ -368,11 +720,11 @@
         try {
             const response = await fetch(resource, { ...options, signal: controller.signal });
             clearTimeout(id);
-            if (!response.ok) throw new Error('Servicio no disponible');
+            if (!response.ok) throw new Error(t('serviceUnavailable'));
             return response.json();
         } catch (error) {
             clearTimeout(id);
-            throw new Error(error.name === 'AbortError' ? 'Timeout' : 'Servicio no disponible');
+            throw new Error(error.name === 'AbortError' ? t('requestTimeout') : t('serviceUnavailable'));
         }
     }
 
@@ -420,16 +772,16 @@
 
     function renderTooltipList(items, emptyText, isPositive = false) {
         if (!items.length) {
-            return `<div class="text-xs text-gray-500">${emptyText}</div>`;
+            return `<div class="text-xs text-slate-500">${escapeHtml(emptyText)}</div>`;
         }
-        return `<ul class="space-y-1 text-xs text-gray-700">${items.map(item => {
+        return `<ul class="space-y-1 text-xs text-slate-700">${items.map(item => {
             if (isPositive) {
                 return `<li>${escapeHtml(item.domain)}</li>`;
             }
             const statusText = item.status === 'fail'
-                ? 'falló'
+                ? t('statusFailed')
                 : item.status === 'error'
-                    ? 'error'
+                    ? t('statusError')
                     : item.status || '';
             const suffix = statusText ? ` (${escapeHtml(statusText)})` : '';
             return `<li>${escapeHtml(item.domain)}${suffix}</li>`;
@@ -440,7 +792,8 @@
         if (!dateString) return '';
         const date = new Date(dateString);
         if (Number.isNaN(date.getTime())) return dateString;
-        return date.toLocaleDateString('es-UY', { year: 'numeric', month: 'short', day: 'numeric' });
+        const locale = localeMap[currentLang] || 'en-US';
+        return date.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
     }
 
     function initializeSummary(selectedChecks) {
@@ -458,35 +811,35 @@
 
             const row = document.createElement('tr');
             const labelCell = document.createElement('td');
-            labelCell.className = 'px-4 py-3 font-medium text-gray-700';
+            labelCell.className = 'px-4 py-3 font-medium text-slate-700';
             labelCell.textContent = label;
             row.appendChild(labelCell);
 
             const positiveCell = document.createElement('td');
-            positiveCell.className = 'px-4 py-3 text-green-600';
+            positiveCell.className = 'px-4 py-3 text-emerald-600';
             const positiveWrapper = document.createElement('div');
             positiveWrapper.className = 'relative group inline-block';
             const positiveCount = document.createElement('span');
             positiveCount.className = 'font-semibold cursor-help';
             positiveCount.textContent = '0';
             const positiveTooltip = document.createElement('div');
-            positiveTooltip.className = 'summary-tooltip hidden group-hover:block absolute z-20 left-1/2 transform -translate-x-1/2 mt-2 w-56 max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg p-3';
-            positiveTooltip.innerHTML = renderTooltipList([], 'Sin resultados positivos', true);
+            positiveTooltip.className = 'summary-tooltip hidden group-hover:block absolute z-20 left-1/2 transform -translate-x-1/2 mt-2 w-56 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg p-3';
+            positiveTooltip.innerHTML = renderTooltipList([], t('noPositiveResults'), true);
             positiveWrapper.appendChild(positiveCount);
             positiveWrapper.appendChild(positiveTooltip);
             positiveCell.appendChild(positiveWrapper);
             row.appendChild(positiveCell);
 
             const negativeCell = document.createElement('td');
-            negativeCell.className = 'px-4 py-3 text-red-600';
+            negativeCell.className = 'px-4 py-3 text-rose-600';
             const negativeWrapper = document.createElement('div');
             negativeWrapper.className = 'relative group inline-block';
             const negativeCount = document.createElement('span');
             negativeCount.className = 'font-semibold cursor-help';
             negativeCount.textContent = '0';
             const negativeTooltip = document.createElement('div');
-            negativeTooltip.className = 'summary-tooltip hidden group-hover:block absolute z-20 left-1/2 transform -translate-x-1/2 mt-2 w-56 max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg p-3';
-            negativeTooltip.innerHTML = renderTooltipList([], 'Sin resultados negativos');
+            negativeTooltip.className = 'summary-tooltip hidden group-hover:block absolute z-20 left-1/2 transform -translate-x-1/2 mt-2 w-56 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg p-3';
+            negativeTooltip.innerHTML = renderTooltipList([], t('noNegativeResults'));
             negativeWrapper.appendChild(negativeCount);
             negativeWrapper.appendChild(negativeTooltip);
             negativeCell.appendChild(negativeWrapper);
@@ -511,8 +864,8 @@
         if (!elements) return;
         elements.positiveCount.textContent = entry.positive;
         elements.negativeCount.textContent = entry.negative;
-        elements.positiveTooltip.innerHTML = renderTooltipList(entry.positives, 'Sin resultados positivos', true);
-        elements.negativeTooltip.innerHTML = renderTooltipList(entry.negatives, 'Sin resultados negativos');
+        elements.positiveTooltip.innerHTML = renderTooltipList(entry.positives, t('noPositiveResults'), true);
+        elements.negativeTooltip.innerHTML = renderTooltipList(entry.negatives, t('noNegativeResults'));
     }
 
     function getStatusHtml(status, details = '') {
@@ -544,9 +897,9 @@
 
     function createResultCard(domain, selectedChecks) {
         const card = document.createElement('div');
-        card.className = 'p-4 rounded-lg bg-gray-50 border border-gray-200 shadow-sm';
+        card.className = 'p-5 rounded-2xl bg-slate-50 border border-slate-200 shadow-sm';
         const title = document.createElement('h3');
-        title.className = 'font-bold text-xl text-gray-800 mb-4 pb-2 border-b';
+        title.className = 'font-bold text-xl text-slate-900 mb-4 pb-2 border-b border-slate-200';
         title.textContent = domain;
         card.appendChild(title);
 
@@ -557,18 +910,19 @@
             const filtered = selectedChecks.filter(c => groupKeys.includes(c));
             if (!filtered.length) continue;
             const h4 = document.createElement('h4');
-            h4.className = 'text-md font-semibold text-gray-700 mt-4 mb-2';
-            h4.textContent = group.title;
+            h4.className = 'text-md font-semibold text-slate-800 mt-4 mb-2';
+            h4.dataset.groupTitle = group.titleKey;
+            h4.textContent = t(group.titleKey);
             card.appendChild(h4);
             filtered.forEach(c => {
                 const row = document.createElement('div');
-                row.className = 'result-item flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0';
+                row.className = 'result-item flex justify-between items-center py-2 border-b border-slate-200 last:border-b-0';
                 const label = document.createElement('span');
-                label.className = 'label text-sm font-medium text-gray-600';
+                label.className = 'label text-sm font-medium text-slate-700';
                 label.textContent = checkConfig[c].label;
                 const placeholder = document.createElement('span');
-                placeholder.className = 'text-gray-500 flex items-center';
-                placeholder.innerHTML = '<div class="loader mr-2"></div><span>Cargando...</span>';
+                placeholder.className = 'text-slate-500 flex items-center';
+                placeholder.innerHTML = `<div class="loader mr-2"></div><span>${escapeHtml(t('loadingIndicator'))}</span>`;
                 row.appendChild(label);
                 row.appendChild(placeholder);
                 card.appendChild(row);
@@ -596,7 +950,7 @@
                             lines.push(`${g.ip}: ${[g.city, g.region, g.country].filter(Boolean).join(', ')}${g.asn ? ' (AS' + g.asn + ')' : ''}`);
                         });
                     }
-                    return { label, status: lines.length ? 'ok' : 'fail', details: lines.length ? lines : 'Sin datos' };
+                    return { label, status: lines.length ? 'ok' : 'fail', details: lines.length ? lines : 'No data' };
                 }
                 case 'serverlocation': {
                     const data = await fetchWithTimeout(`${API_BASE}/serverlocation/${ascii}`);
@@ -604,38 +958,38 @@
                     const parts = [data.city, data.region, data.country].filter(Boolean).join(', ');
                     const details = [];
                     if (parts || data.ip) details.push(parts ? `${parts} (${data.ip})` : data.ip);
-                    if (data.timezone) details.push(`Zona horaria: ${data.timezone}`);
+                    if (data.timezone) details.push(`Time zone: ${data.timezone}`);
                     if (data.latitude != null && data.longitude != null) {
-                        details.push(`Coordenadas: ${data.latitude}, ${data.longitude}`);
+                        details.push(`Coordinates: ${data.latitude}, ${data.longitude}`);
                     }
                     return {
                         label,
                         status: data.ip ? 'ok' : 'fail',
-                        details: details.length ? details : 'Sin datos'
+                        details: details.length ? details : 'No data'
                     };
                 }
                 case 'serverinfo': {
                     const data = await fetchWithTimeout(`${API_BASE}/serverinfo/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
                     const lines = [];
-                    if (data.ip) lines.push(`IP analizada: ${data.ip}`);
+                    if (data.ip) lines.push(`Analyzed IP: ${data.ip}`);
                     if (data.asn) lines.push(`ASN: AS${data.asn}`);
-                    if (data.org) lines.push(`Organización: ${data.org}`);
-                    if (data.network) lines.push(`Prefijo: ${data.network}`);
+                    if (data.org) lines.push(`Organization: ${data.org}`);
+                    if (data.network) lines.push(`Prefix: ${data.network}`);
                     if (data.isp) lines.push(`ISP: ${data.isp}`);
-                    if (data.city || data.country) lines.push(`Ubicación: ${[data.city, data.country].filter(Boolean).join(', ')}`);
-                    return { label, status: lines.length ? 'ok' : 'fail', details: lines.length ? lines : 'Sin datos' };
+                    if (data.city || data.country) lines.push(`Location: ${[data.city, data.country].filter(Boolean).join(', ')}`);
+                    return { label, status: lines.length ? 'ok' : 'fail', details: lines.length ? lines : 'No data' };
                 }
                 case 'serverstatus': {
                     const data = await fetchWithTimeout(`${API_BASE}/serverstatus/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
                     const code = data.statusCode;
-                    if (!code) return { label, status: 'error', details: 'Sin respuesta' };
+                    if (!code) return { label, status: 'error', details: 'No response' };
                     if (code >= 500) return { label, status: 'fail', details: `HTTP ${code}` };
                     if (code >= 400) return { label, status: 'fail', details: `HTTP ${code}` };
                     if (code >= 300) {
                         const target = data.location ? ` → ${data.location}` : '';
-                        return { label, status: 'info', details: `HTTP ${code} (redirección)${target}` };
+                        return { label, status: 'info', details: `HTTP ${code} (redirect)${target}` };
                     }
                     return { label, status: 'ok', details: `HTTP ${code}` };
                 }
@@ -646,30 +1000,30 @@
                     const expected = new Set([53, 80, 443, 25, 110, 143, 465, 587, 993, 995]);
                     const unusual = open.filter(port => !expected.has(port));
                     if (!open.length) {
-                        return { label, status: 'ok', details: 'Sin puertos comunes abiertos' };
+                        return { label, status: 'ok', details: 'No common ports open' };
                     }
                     if (unusual.length) {
-                        const details = [`Puertos no estándar: ${unusual.join(', ')}`];
+                        const details = [`Non-standard ports: ${unusual.join(', ')}`];
                         if (open.length > unusual.length) {
                             const standard = open.filter(port => expected.has(port));
-                            details.push(`Puertos esperados: ${standard.join(', ')}`);
+                            details.push(`Expected ports: ${standard.join(', ')}`);
                         }
                         return { label, status: 'fail', details };
                     }
-                    return { label, status: 'ok', details: `Puertos estándar: ${open.join(', ')}` };
+                    return { label, status: 'ok', details: `Standard ports: ${open.join(', ')}` };
                 }
                 case 'traceroute': {
                     const data = await fetchWithTimeout(`${API_BASE}/traceroute/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
                     const hops = data.hops?.slice(0, 10) || [];
-                    return { label, status: hops.length ? 'ok' : 'info', details: hops.length ? hops : 'Sin datos' };
+                    return { label, status: hops.length ? 'ok' : 'info', details: hops.length ? hops : 'No data' };
                 }
                 case 'redirectchain': {
                     const data = await fetchWithTimeout(`${API_BASE}/redirectchain/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
                     const chain = (data.chain || []).filter(Boolean);
                     if (!chain.length) {
-                        return { label, status: 'info', details: 'Sin redirecciones' };
+                        return { label, status: 'info', details: 'No redirects' };
                     }
                     const deduped = [];
                     const seen = new Set();
@@ -682,12 +1036,12 @@
                     });
                     const finalStep = deduped[deduped.length - 1];
                     const lines = deduped.map((step, index) => {
-                        const code = step.statusCode ? `HTTP ${step.statusCode}` : 'Sin código';
+                        const code = step.statusCode ? `HTTP ${step.statusCode}` : 'No status code';
                         const destination = step.location || step.url;
-                        const note = index === deduped.length - 1 ? 'destino final' : 'redirección';
+                        const note = index === deduped.length - 1 ? 'final destination' : 'redirect';
                         return `${index + 1}. ${code} → ${destination} (${note})`;
                     });
-                    const summary = `Cadena de ${deduped.length} pasos. Último destino: ${finalStep.location || finalStep.url}`;
+                    const summary = `Chain of ${deduped.length} steps. Last destination: ${finalStep.location || finalStep.url}`;
                     let status = 'info';
                     if (finalStep.statusCode >= 400) status = 'fail';
                     else if (deduped.length === 1 && finalStep.statusCode < 300) status = 'ok';
@@ -696,9 +1050,9 @@
                 case 'block': {
                     const data = await fetchWithTimeout(`${API_BASE}/block/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    const lines = data.results?.map(r => `${r.resolver}: ${r.blocked ? 'bloqueado' : 'acceso'}`) || [];
+                    const lines = data.results?.map(r => `${r.resolver}: ${r.blocked ? 'blocked' : 'allowed'}`) || [];
                     const blocked = data.results?.some(r => r.blocked);
-                    return { label, status: blocked ? 'fail' : 'ok', details: lines.length ? lines : 'Sin datos' };
+                    return { label, status: blocked ? 'fail' : 'ok', details: lines.length ? lines : 'No data' };
                 }
                 case 'dnsrecords': {
                     const data = await fetchWithTimeout(`${API_BASE}/dnsrecords/${ascii}`);
@@ -712,35 +1066,35 @@
                             records.push(`${type}: ${formatted}`);
                         }
                     });
-                    return { label, status: records.length ? 'ok' : 'fail', details: records.length ? records : 'Sin registros' };
+                    return { label, status: records.length ? 'ok' : 'fail', details: records.length ? records : 'No records found' };
                 }
                 case 'txtrecords': {
                     const data = await fetchWithTimeout(`${API_BASE}/txtrecords/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
                     const records = data.records?.map(r => r.join('')) || [];
-                    return { label, status: records.length ? 'ok' : 'fail', details: records.length ? records : 'Sin TXT' };
+                    return { label, status: records.length ? 'ok' : 'fail', details: records.length ? records : 'No TXT records' };
                 }
                 case 'dnsserver': {
                     const data = await fetchWithTimeout(`${API_BASE}/dnsserver/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    return { label, status: data.servers?.length ? 'ok' : 'fail', details: data.servers?.length ? data.servers : 'Sin NS' };
+                    return { label, status: data.servers?.length ? 'ok' : 'fail', details: data.servers?.length ? data.servers : 'No name servers found' };
                 }
                 case 'dnssecurity': {
                     const data = await fetchWithTimeout(`${API_BASE}/dnssecurity/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
                     const lines = [];
-                    if (data.algorithms?.length) lines.push(`Algoritmos: ${data.algorithms.join(', ')}`);
-                    if (data.doh) lines.push('DoH activo');
-                    lines.push(data.valid ? 'DNSSEC válido' : 'DNSSEC ausente');
+                    if (data.algorithms?.length) lines.push(`Algorithms: ${data.algorithms.join(', ')}`);
+                    if (data.doh) lines.push('DoH enabled');
+                    lines.push(data.valid ? 'DNSSEC validated' : 'DNSSEC not present');
                     return { label, status: data.valid ? 'ok' : 'fail', details: lines };
                 }
                 case 'emailconfig': {
                     const data = await fetchWithTimeout(`${API_BASE}/emailconfig/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
                     const lines = [
-                        `SPF: ${data.spf ? 'sí' : 'no'}`,
-                        `DMARC: ${data.dmarc ? 'sí' : 'no'}`,
-                        `DKIM: ${data.dkim ? 'sí' : 'no'}`
+                        `SPF: ${data.spf ? 'yes' : 'no'}`,
+                        `DMARC: ${data.dmarc ? 'yes' : 'no'}`,
+                        `DKIM: ${data.dkim ? 'yes' : 'no'}`
                     ];
                     if (data.mx?.length) lines.push(`MX: ${data.mx.map(m => `${m.exchange} (p${m.priority})`).join(', ')}`);
                     return { label, status: data.spf || data.dmarc || data.dkim ? 'ok' : 'fail', details: lines };
@@ -752,57 +1106,57 @@
                     const lines = Object.entries(features).map(([k, v]) => {
                         const clean = k.replace(/^has/, '').replace(/([A-Z])/g, ' $1').trim();
                         const formatted = clean.charAt(0).toUpperCase() + clean.slice(1);
-                        return `${formatted}: ${v ? 'sí' : 'no'}`;
+                        return `${formatted}: ${v ? 'yes' : 'no'}`;
                     });
-                    return { label, status: lines.some(l => /sí$/.test(l)) ? 'ok' : 'info', details: lines };
+                    return { label, status: lines.some(l => /yes$/.test(l)) ? 'ok' : 'info', details: lines };
                 }
                 case 'cookies': {
                     const data = await fetchWithTimeout(`${API_BASE}/cookies/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
                     const cookies = data.cookies || [];
-                    return { label, status: cookies.length ? 'info' : 'ok', details: cookies.length ? cookies : 'Sin cookies' };
+                    return { label, status: cookies.length ? 'info' : 'ok', details: cookies.length ? cookies : 'No cookies detected' };
                 }
                 case 'crawlrules': {
                     const data = await fetchWithTimeout(`${API_BASE}/crawlrules/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    if (!data.found) return { label, status: 'fail', details: 'No encontrado' };
+                    if (!data.found) return { label, status: 'fail', details: 'Not found' };
                     const snippet = escapeHtml((data.content || '').slice(0, 500));
-                    const html = `<pre class="whitespace-pre-wrap text-xs text-gray-700">${snippet}${data.content && data.content.length > 500 ? '…' : ''}</pre>`;
+                    const html = `<pre class="whitespace-pre-wrap text-xs text-slate-700">${snippet}${data.content && data.content.length > 500 ? '…' : ''}</pre>`;
                     return { label, status: 'ok', details: { html } };
                 }
                 case 'linkedpages': {
                     const data = await fetchWithTimeout(`${API_BASE}/linkedpages/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    const lines = data.links?.slice(0, 20).map(l => `${l.internal ? 'Interno' : 'Externo'}: ${l.href}`) || [];
-                    return { label, status: lines.length ? 'ok' : 'info', details: lines.length ? lines : 'Sin enlaces detectados' };
+                    const lines = data.links?.slice(0, 20).map(l => `${l.internal ? 'Internal' : 'External'}: ${l.href}`) || [];
+                    return { label, status: lines.length ? 'ok' : 'info', details: lines.length ? lines : 'No links detected' };
                 }
                 case 'listedpages': {
                     const data = await fetchWithTimeout(`${API_BASE}/listedpages/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
                     const pages = data.pages?.slice(0, 20) || [];
-                    return { label, status: pages.length ? 'ok' : 'info', details: pages.length ? pages : 'Sin sitemap' };
+                    return { label, status: pages.length ? 'ok' : 'info', details: pages.length ? pages : 'No sitemap' };
                 }
                 case 'socialtags': {
                     const data = await fetchWithTimeout(`${API_BASE}/socialtags/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
                     const tags = Object.entries(data.tags || {}).map(([k, v]) => `${k}: ${v}`);
-                    return { label, status: tags.length ? 'ok' : 'info', details: tags.length ? tags : 'Sin etiquetas sociales' };
+                    return { label, status: tags.length ? 'ok' : 'info', details: tags.length ? tags : 'No social tags' };
                 }
                 case 'quality': {
                     const data = await fetchWithTimeout(`${API_BASE}/quality/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
                     const lines = [];
                     if (typeof data.performance === 'number') lines.push(`Performance: ${(data.performance * 100).toFixed(0)}`);
-                    if (typeof data.accessibility === 'number') lines.push(`Accesibilidad: ${(data.accessibility * 100).toFixed(0)}`);
-                    if (typeof data.bestPractices === 'number') lines.push(`Mejores prácticas: ${(data.bestPractices * 100).toFixed(0)}`);
+                    if (typeof data.accessibility === 'number') lines.push(`Accessibility: ${(data.accessibility * 100).toFixed(0)}`);
+                    if (typeof data.bestPractices === 'number') lines.push(`Best practices: ${(data.bestPractices * 100).toFixed(0)}`);
                     if (typeof data.seo === 'number') lines.push(`SEO: ${(data.seo * 100).toFixed(0)}`);
-                    return { label, status: lines.length ? 'ok' : 'info', details: lines.length ? lines : 'Sin datos de Lighthouse' };
+                    return { label, status: lines.length ? 'ok' : 'info', details: lines.length ? lines : 'No Lighthouse data' };
                 }
                 case 'archive': {
                     const data = await fetchWithTimeout(`${API_BASE}/archive/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
                     const entries = data.entries?.map(e => `${e.timestamp}: ${e.original} (${e.status})`) || [];
-                    return { label, status: entries.length ? 'ok' : 'info', details: entries.length ? entries : 'Sin historial' };
+                    return { label, status: entries.length ? 'ok' : 'info', details: entries.length ? entries : 'No historical data' };
                 }
                 case 'ranking': {
                     const data = await fetchWithTimeout(`${API_BASE}/ranking/${ascii}`);
@@ -810,7 +1164,7 @@
                     return {
                         label,
                         status: data.rank ? 'ok' : 'info',
-                        details: data.rank ? `Ranking global ${data.rank}${data.date ? ` (${data.date})` : ''}` : 'Sin ranking'
+                        details: data.rank ? `Global ranking ${data.rank}${data.date ? ` (${data.date})` : ''}` : 'No ranking data'
                     };
                 }
                 case 'malware': {
@@ -818,31 +1172,31 @@
                     if (data.error) return { label, status: 'error', details: data.error };
                     const entries = data.entries?.map(e => `${e.url || e.id} (${e.status || 'listado'})`) || [];
                     const threat = data.threat && data.threat !== 'ok';
-                    return { label, status: threat ? 'fail' : 'ok', details: entries.length ? entries : 'Sin reportes' };
+                    return { label, status: threat ? 'fail' : 'ok', details: entries.length ? entries : 'No reports' };
                 }
                 case 'screenshot': {
                     const data = await fetchWithTimeout(`${API_BASE}/screenshot/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    const link = `<a class="text-blue-600 underline" href="${escapeHtml(data.imageUrl)}" target="_blank" rel="noopener">Ver captura</a>`;
+                    const link = `<a class="text-blue-600 underline" href="${escapeHtml(data.imageUrl)}" target="_blank" rel="noopener">View capture</a>`;
                     return { label, status: 'info', details: { html: link } };
                 }
                 case 'headers': {
                     const data = await getSecurityHeaders(domain);
                     if (data.error) return { label, status: 'error', details: data.error };
                     const entries = Object.entries(data.headers || {}).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`);
-                    return { label, status: entries.length ? 'ok' : 'info', details: entries.length ? entries : 'Sin encabezados' };
+                    return { label, status: entries.length ? 'ok' : 'info', details: entries.length ? entries : 'No headers' };
                 }
                 case 'sslchain': {
                     const data = await fetchWithTimeout(`${API_BASE}/sslchain/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    const chain = data.chain?.map(c => `${c.subject?.CN || 'Certificado'} → ${c.issuer?.CN || 'Emisor'} (${c.valid_from} - ${c.valid_to})`) || [];
-                    return { label, status: chain.length ? 'ok' : 'fail', details: chain.length ? chain : 'Sin cadena SSL' };
+                    const chain = data.chain?.map(c => `${c.subject?.CN || 'Certificate'} → ${c.issuer?.CN || 'Issuer'} (${c.valid_from} - ${c.valid_to})`) || [];
+                    return { label, status: chain.length ? 'ok' : 'fail', details: chain.length ? chain : 'No SSL chain' };
                 }
                 case 'tlsciphers': {
                     const data = await fetchWithTimeout(`${API_BASE}/tlsciphers/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
                     const suites = data.suites?.map(s => `${s.protocol}: ${s.cipher}`) || [];
-                    return { label, status: suites.length ? 'ok' : 'info', details: suites.length ? suites : 'Sin información' };
+                    return { label, status: suites.length ? 'ok' : 'info', details: suites.length ? suites : 'No information' };
                 }
                 case 'tlsconfig': {
                     const data = await fetchWithTimeout(`${API_BASE}/tlsconfig/${ascii}`);
@@ -850,7 +1204,7 @@
                     if (data.data?.error) return { label, status: 'error', details: data.data.error };
                     const score = data.data?.score;
                     const details = [];
-                    if (score !== undefined) details.push(`Puntaje: ${score}`);
+                    if (score !== undefined) details.push(`Score: ${score}`);
                     if (data.data?.tests) {
                         Object.entries(data.data.tests).slice(0, 10).forEach(([name, result]) => {
                             if (result && typeof result === 'object' && result.output) {
@@ -858,22 +1212,22 @@
                             }
                         });
                     }
-                    return { label, status: score !== undefined ? 'ok' : 'info', details: details.length ? details : 'Sin datos' };
+                    return { label, status: score !== undefined ? 'ok' : 'info', details: details.length ? details : 'No data' };
                 }
                 case 'tlssimulation': {
                     const data = await fetchWithTimeout(`${API_BASE}/tlssimulation/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    const scenarios = data.scenarios?.map(s => `${s.client}: ${s.success ? `${s.protocol || 'TLS'} (${s.cipher || 'cifra desconocida'})` : 'falló'}`) || [];
+                    const scenarios = data.scenarios?.map(s => `${s.client}: ${s.success ? `${s.protocol || 'TLS'} (${s.cipher || 'unknown cipher'})` : 'failed'}`) || [];
                     const success = data.scenarios?.every(s => s.success);
-                    return { label, status: success ? 'ok' : 'fail', details: scenarios.length ? scenarios : 'Sin datos' };
+                    return { label, status: success ? 'ok' : 'fail', details: scenarios.length ? scenarios : 'No data' };
                 }
                 case 'httpsecurity': {
                     const data = await fetchWithTimeout(`${API_BASE}/httpsecurity/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
                     const security = data.security || {};
-                    const lines = Object.entries(security).map(([k, v]) => `${k.toUpperCase()}: ${v ? 'sí' : 'no'}`);
+                    const lines = Object.entries(security).map(([k, v]) => `${k.toUpperCase()}: ${v ? 'yes' : 'no'}`);
                     const ok = Object.values(security).some(Boolean);
-                    return { label, status: ok ? 'ok' : 'fail', details: lines.length ? lines : 'Sin cabeceras de seguridad' };
+                    return { label, status: ok ? 'ok' : 'fail', details: lines.length ? lines : 'No security headers' };
                 }
                 case 'firewall': {
                     const data = await fetchWithTimeout(`${API_BASE}/firewall/${ascii}`);
@@ -881,15 +1235,15 @@
                     return {
                         label,
                         status: data.detected ? 'ok' : 'info',
-                        details: data.detected ? `Detectado: ${data.waf.join(', ')}` : 'No se identificó WAF'
+                        details: data.detected ? `Detected: ${data.waf.join(', ')}` : 'No WAF detected'
                     };
                 }
                 case 'dnssec': {
                     const data = await fetchWithTimeout(`${API_BASE}/dnssec/${ascii}`);
                     const ok = data.valid;
                     const details = ok
-                        ? (data.algorithms?.length ? `Algoritmos: ${data.algorithms.join(', ')}` : 'DNSSEC configurado')
-                        : '¡No tiene DNSSEC!';
+                        ? (data.algorithms?.length ? `Algorithms: ${data.algorithms.join(', ')}` : 'DNSSEC configured')
+                        : 'DNSSEC missing';
                     return { label, status: ok ? 'ok' : 'fail', details };
                 }
                 case 'ipv4': {
@@ -902,13 +1256,13 @@
                             geos.push({ ip, country: info.country_name, lat: info.latitude, lon: info.longitude, asn: info.asn });
                         } catch (e) {}
                     }
-                    const details = ips.length ? ips.join(', ') : 'No tiene IPv4';
+                    const details = ips.length ? ips.join(', ') : 'IPv4 not available';
                     return { label, status: ips.length ? 'ok' : 'fail', details, geos };
                 }
                 case 'ipv6': {
                     const data = await fetchWithTimeout(`https://dns.google/resolve?name=${ascii}&type=AAAA`);
                     const ips = data.Answer?.filter(r => r.type === 28).map(r => r.data) || [];
-                    return { label, status: ips.length ? 'ok' : 'fail', details: ips.length ? ips.join(', ') : 'No tiene IPv6' };
+                    return { label, status: ips.length ? 'ok' : 'fail', details: ips.length ? ips.join(', ') : 'IPv6 not available' };
                 }
                 case 'asn': {
                     const data = await fetchWithTimeout(`${API_BASE}/serverinfo/${ascii}`);
@@ -916,28 +1270,28 @@
                     return {
                         label,
                         status: data.asn ? 'ok' : 'fail',
-                        details: data.asn ? `AS${data.asn}${data.org ? ` (${data.org})` : ''}` : 'Sin datos'
+                        details: data.asn ? `AS${data.asn}${data.org ? ` (${data.org})` : ''}` : 'No data'
                     };
                 }
                 case 'dmarc': {
                     const data = await fetchWithTimeout(`https://dns.google/resolve?name=_dmarc.${ascii}&type=TXT`);
                     const found = data.Answer?.some(r => r.data.includes("v=DMARC1"));
-                    return { label, status: found ? 'ok' : 'fail', details: found ? 'Política encontrada' : 'No permite DMARC' };
+                    return { label, status: found ? 'ok' : 'fail', details: found ? 'Policy found' : 'DMARC not supported' };
                 }
                 case 'spf': {
                     const data = await fetchWithTimeout(`https://dns.google/resolve?name=${ascii}&type=TXT`);
                     const found = data.Answer?.some(r => r.data.includes("v=spf1"));
-                    return { label, status: found ? 'ok' : 'fail', details: found ? 'Registro encontrado' : 'No permite SPF' };
+                    return { label, status: found ? 'ok' : 'fail', details: found ? 'Policy found' : 'SPF not supported' };
                 }
                 case 'dkim': {
                     const data = await fetchWithTimeout(`${API_BASE}/dkim/${ascii}?selector=default`);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    return { label, status: data.found ? 'ok' : 'fail', details: data.found ? 'Registro encontrado' : 'No permite DKIM' };
+                    return { label, status: data.found ? 'ok' : 'fail', details: data.found ? 'Record found' : 'DKIM not supported' };
                 }
                 case 'mx': {
                     const data = await fetchWithTimeout(`${API_BASE}/mx/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    const details = data.records?.map(r => `${r.exchange} (p${r.priority})`).join(', ') || 'No permite MX';
+                    const details = data.records?.map(r => `${r.exchange} (p${r.priority})`).join(', ') || 'MX not supported';
                     return { label, status: data.records?.length ? 'ok' : 'fail', details };
                 }
                 case 'smtputf8': {
@@ -945,22 +1299,22 @@
                     if (data.error) return { label, status: 'error', details: data.error };
                     const details = data.results?.map(r => {
                         switch (r.status) {
-                            case 'supports': return `${r.server}: sí`;
+                            case 'supports': return `${r.server}: yes`;
                             case 'no': return `${r.server}: no`;
                             case 'timeout': return `${r.server}: timeout`;
-                            case 'connection-error': return `${r.server}: sin conexión`;
-                            default: return `${r.server}: sin datos`;
+                            case 'connection-error': return `${r.server}: no connection`;
+                            default: return `${r.server}: no data`;
                         }
-                    }).join('; ') || 'No permite SMTPUTF8';
+                    }).join('; ') || 'SMTPUTF8 not supported';
                     const ok = data.results?.length && data.results.every(r => r.status === 'supports');
                     return { label, status: ok ? 'ok' : 'fail', details };
                 }
                 case 'rpki': {
                     const data = await fetchWithTimeout(`${API_BASE}/rpki/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    if (!data.results?.length) return { label, status: 'error', details: 'Sin datos' };
+                    if (!data.results?.length) return { label, status: 'error', details: 'No data' };
                     const details = data.results.map(r => {
-                        const state = r.state === 'valid' ? 'válido' : r.state === 'invalid' ? 'inválido' : 'desconocido';
+                        const state = r.state === 'valid' ? 'valid' : r.state === 'invalid' ? 'invalid' : 'unknown';
                         const asn = r.asn ? ` AS${r.asn}` : '';
                         const prefix = r.prefix ? ` (${r.prefix})` : '';
                         return `${r.ip}: ${state}${asn}${prefix}`;
@@ -974,18 +1328,18 @@
                     const data = await fetchWithTimeout(`${API_BASE}/domaininfo/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
                     const lines = [];
-                    if (data.registry) lines.push(`Registro: ${data.registry}`);
+                    if (data.registry) lines.push(`Registry: ${data.registry}`);
                     if (Array.isArray(data.status) && data.status.length) {
-                        lines.push(`Estados: ${data.status.join(', ')}`);
+                        lines.push(`Statuses: ${data.status.join(', ')}`);
                     }
-                    if (data.creation) lines.push(`Creación: ${formatDate(data.creation)}`);
-                    if (data.expiration) lines.push(`Expira: ${formatDate(data.expiration)}`);
-                    return { label, status: lines.length ? 'ok' : 'info', details: lines.length ? lines : 'Sin datos' };
+                    if (data.creation) lines.push(`Created: ${formatDate(data.creation)}`);
+                    if (data.expiration) lines.push(`Expires: ${formatDate(data.expiration)}`);
+                    return { label, status: lines.length ? 'ok' : 'info', details: lines.length ? lines : 'No data' };
                 }
                 case 'whois': {
                     const data = await fetchWithTimeout(`${API_BASE}/whois/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    const details = data.country ? `${data.name || 'Desconocido'} (${data.country})` : (data.name || 'Desconocido');
+                    const details = data.country ? `${data.name || 'Unknown'} (${data.country})` : (data.name || 'Unknown');
                     return { label, status: data.name ? 'ok' : 'fail', details };
                 }
                 case 'https': {
@@ -1001,58 +1355,58 @@
                 case 'hsts': {
                     const data = await getSecurityHeaders(domain);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    return { label, status: data.hsts ? 'ok' : 'fail', details: data.hsts ? 'Cabecera presente' : 'Sin HSTS' };
+                    return { label, status: data.hsts ? 'ok' : 'fail', details: data.hsts ? 'Header present' : 'Missing HSTS' };
                 }
                 case 'csp': {
                     const data = await getSecurityHeaders(domain);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    return { label, status: data.csp ? 'ok' : 'fail', details: data.csp ? 'Cabecera presente' : 'Sin CSP' };
+                    return { label, status: data.csp ? 'ok' : 'fail', details: data.csp ? 'Header present' : 'Missing CSP' };
                 }
                 case 'xfo': {
                     const data = await getSecurityHeaders(domain);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    return { label, status: data.xfo ? 'ok' : 'fail', details: data.xfo ? 'Cabecera presente' : 'Sin X-Frame-Options' };
+                    return { label, status: data.xfo ? 'ok' : 'fail', details: data.xfo ? 'Header present' : 'Missing X-Frame-Options' };
                 }
                 case 'xcto': {
                     const data = await getSecurityHeaders(domain);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    return { label, status: data.xcto ? 'ok' : 'fail', details: data.xcto ? 'Cabecera presente' : 'Sin X-Content-Type-Options' };
+                    return { label, status: data.xcto ? 'ok' : 'fail', details: data.xcto ? 'Header present' : 'Missing X-Content-Type-Options' };
                 }
                 case 'referrer': {
                     const data = await getSecurityHeaders(domain);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    return { label, status: data.referrer ? 'ok' : 'fail', details: data.referrer ? 'Cabecera presente' : 'Sin Referrer-Policy' };
+                    return { label, status: data.referrer ? 'ok' : 'fail', details: data.referrer ? 'Header present' : 'Missing Referrer-Policy' };
                 }
                 case 'permissions': {
                     const data = await getSecurityHeaders(domain);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    return { label, status: data.permissions ? 'ok' : 'fail', details: data.permissions ? 'Cabecera presente' : 'Sin Permissions-Policy' };
+                    return { label, status: data.permissions ? 'ok' : 'fail', details: data.permissions ? 'Header present' : 'Missing Permissions-Policy' };
                 }
                 case 'xxss': {
                     const data = await getSecurityHeaders(domain);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    return { label, status: data.xxss ? 'ok' : 'fail', details: data.xxss ? 'Cabecera presente' : 'Sin X-XSS-Protection' };
+                    return { label, status: data.xxss ? 'ok' : 'fail', details: data.xxss ? 'Header present' : 'Missing X-XSS-Protection' };
                 }
                 case 'server': {
                     const data = await getSecurityHeaders(domain);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    return { label, status: data.server ? 'fail' : 'ok', details: data.server || 'No expuesto' };
+                    return { label, status: data.server ? 'fail' : 'ok', details: data.server || 'Not exposed' };
                 }
                 case 'compression': {
                     const data = await getSecurityHeaders(domain);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    return { label, status: data.compression ? 'ok' : 'fail', details: data.compression ? 'Compresión habilitada' : 'Sin compresión' };
+                    return { label, status: data.compression ? 'ok' : 'fail', details: data.compression ? 'Compression enabled' : 'No compression' };
                 }
                 case 'ocsp': {
                     const data = await getTlsInfo(domain);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    return { label, status: data.ocsp ? 'ok' : 'fail', details: data.ocsp ? 'OCSP válido' : 'Sin OCSP' };
+                    return { label, status: data.ocsp ? 'ok' : 'fail', details: data.ocsp ? 'OCSP stapling enabled' : 'No OCSP stapling' };
                 }
                 case 'tls': {
                     const data = await getTlsInfo(domain);
                     if (data.error) return { label, status: 'error', details: data.error };
                     const ok = data.protocol === 'TLSv1.3' || data.protocol === 'TLSv1.2';
-                    return { label, status: ok ? 'ok' : 'fail', details: data.protocol || 'Desconocido' };
+                    return { label, status: ok ? 'ok' : 'fail', details: data.protocol || 'Unknown' };
                 }
                 case 'key': {
                     const data = await getTlsInfo(domain);
@@ -1062,23 +1416,23 @@
                     if (info.type === 'ECDH') ok = info.size >= 224;
                     else if (info.type === 'DH') ok = info.size >= 2048;
                     else ok = true;
-                    const details = info.type ? `${info.type}${info.size ? ' ' + info.size : ''}` : 'Sin datos';
+                    const details = info.type ? `${info.type}${info.size ? ' ' + info.size : ''}` : 'No data';
                     return { label, status: ok ? 'ok' : 'fail', details };
                 }
                 case 'caa': {
                     const data = await fetchWithTimeout(`${API_BASE}/caa/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    return { label, status: data.records?.length ? 'ok' : 'fail', details: data.records?.length ? data.records.join(', ') : 'No tiene CAA' };
+                    return { label, status: data.records?.length ? 'ok' : 'fail', details: data.records?.length ? data.records.join(', ') : 'No CAA records' };
                 }
                 case 'tlsa': {
                     const data = await fetchWithTimeout(`${API_BASE}/tlsa/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    return { label, status: data.records?.length ? 'ok' : 'fail', details: data.records?.length ? data.records.join(', ') : 'No tiene TLSA' };
+                    return { label, status: data.records?.length ? 'ok' : 'fail', details: data.records?.length ? data.records.join(', ') : 'No TLSA records' };
                 }
                 case 'securitytxt': {
                     const data = await fetchWithTimeout(`${API_BASE}/securitytxt/${ascii}`);
                     if (data.error) return { label, status: 'error', details: data.error };
-                    return { label, status: data.found ? 'ok' : 'fail', details: data.found ? 'Encontrado' : 'No disponible' };
+                    return { label, status: data.found ? 'ok' : 'fail', details: data.found ? 'Found' : 'Not available' };
                 }
             }
         } catch (error) {
@@ -1118,12 +1472,12 @@
         if (!domains.length || !selectedChecks.length) {
             loader.style.display = 'none';
             checkButton.disabled = false;
-            resultsContainer.innerHTML = `<div class="text-center text-gray-500 p-4">${!domains.length ? 'Introduce al menos un dominio.' : 'Selecciona al menos una verificación.'}</div>`;
+            resultsContainer.innerHTML = `<div class="text-center text-slate-500 p-4">${!domains.length ? 'Please enter at least one domain.' : 'Select at least one verification.'}</div>`;
             initializeSummary([]);
             return;
         }
 
-        const historyEntry = { date: new Date().toLocaleString(), checks: selectedChecks, domains: [] };
+        const historyEntry = { date: new Date().toLocaleString(localeMap[currentLang] || 'en-US'), checks: selectedChecks, domains: [] };
         const promises = domains.map(d => analyzeDomain(d, selectedChecks));
         const results = await Promise.all(promises);
         historyEntry.domains = results;
