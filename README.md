@@ -2,7 +2,7 @@
 
 This repository is part of the **Dynamic Coalition on Internet Standards, Security and Safety (DC-IS3C)** within the **Internet Standards, Security and Safety Coalition (IS3C)** under the **Internet Governance Forum (IGF)**.  
 
-It provides an **open-source, verifiable measurement platform** to evaluate the **adoption and deployment of Internet security, trust, and interoperability standards** globally, with a special focus on the **Latin America and Caribbean (LAC)** region.
+It provides an **open-source, verifiable measurement platform** to evaluate the **adoption and deployment of Internet security, trust, and interoperability standards** globally, created by a group of experts in the technical community of **Latin America and Caribbean (LAC)** region.
 
 The project includes:
 - A **web interface** (`index.html`) that provides an interactive measurement dashboard.
